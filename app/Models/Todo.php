@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Todo extends Model
 {
@@ -31,6 +32,11 @@ class Todo extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function statusLogs(): HasMany
+    {
+        return $this->hasMany(TodoStatusLog::class);
     }
 
     public function scopeSearch($query, string $term)
