@@ -3,80 +3,74 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use AuthService;
+use ErrorLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use ResponseHelper;
 
 class AuthController extends Controller
 {
+    protected $authService;
 
-    // user registration
+    public function __construct(AuthService $authService)
+    {
+        $this->authService = $authService;
+    }
+
     public function userRegister(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:50',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|confirmed|min:8',
-            'password_confirmation' => 'required|string|min:8',
-        ]);
+        try {
+            $request->validate([
+                'name'                  => 'required|string|max:50',
+                'email'                 => 'required|email|unique:users,email',
+                'password'              => 'required|string|confirmed|min:8',
+                'password_confirmation' => 'required|string|min:8',
+            ]);
 
+            $user = User::create([
+                'name'     => $request->name,
+                'email'    => $request->email,
+                'password' => Hash::make($request->password),
+            ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-
-        return response()->json([
-            'message' => 'User registered successfully',
-            'status' => true,
-            'data' => $user
-        ]);
+            return ResponseHelper::success($user, 'User registered successfully', 201);
+        } catch (\Exception $e) {
+            ErrorLogger::logError($e);
+            return ResponseHelper::error(null, 'Registration failed', 500);
+        }
     }
 
-
-
-    // user login method
     public function userLogin(Request $request)
     {
-        // validate request
-        $request->validate([
-            'email' => 'required|email|exists:users,email',
-            'password' => 'required|string|min:8',
-        ]);
+        try {
+            $reqData = $request->validate([
+                'email'    => 'required|email|exists:users,email',
+                'password' => 'required|string|min:8',
+            ]);
 
-        $user = User::where('email', $request->email)->first();
-        // dd($user);
+            $userData = $this->authService->userLogin($reqData);
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json([
-                'message' => 'Invalid email or password',
-                'status' => false,
-            ], 401);
+            if (!$userData) {
+                return ResponseHelper::error(null, 'Invalid email or password', 401);
+            }
+
+            return ResponseHelper::success($userData, 'User logged in successfully');
+        } catch (\Exception $e) {
+            ErrorLogger::logError($e);
+            return ResponseHelper::error(null, 'Login failed', 500);
         }
-
-        $accessToken = $user->createToken('authToken')->plainTextToken;
-
-        return response()->json([
-            'message' => 'User logged in successfully',
-            'status' => true,
-            'data' => [
-                'user' => $user,
-                'access_token' => $accessToken,
-            ],
-        ]);
     }
 
-    // logout method
     public function logout()
     {
-        $user = auth()->user();
+        try {
+            auth()->user()->currentAccessToken()->delete();
 
-        // remove access token
-        $user->currentAccessToken()->delete();
-
-        return response()->json([
-            "message" => "User logged out successfully",
-            "status" => true,
-        ]);
+            return ResponseHelper::success(null, 'User logged out successfully');
+        } catch (\Exception $e) {
+            ErrorLogger::logError($e);
+            return ResponseHelper::error(null, 'Logout failed', 500);
+        }
     }
 }
