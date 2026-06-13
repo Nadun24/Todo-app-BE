@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\TodoController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -11,10 +12,6 @@ Route::post('/user-login', [AuthController::class, 'userLogin']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
-
     Route::post('/logout-user', [AuthController::class, 'logout']);
 
     // Todo CRUD
@@ -25,4 +22,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('todos/{id}', [TodoController::class, 'destroy']);
     Route::patch('todos/{id}/complete', [TodoController::class, 'markComplete']);
     Route::patch('todos/{id}/pending', [TodoController::class, 'markPending']);
+
+    // Notifications
+    Route::get('notifications', [NotificationController::class, 'index']);
+    Route::post('notifications/{id}/read', [NotificationController::class, 'markRead']);
 });
